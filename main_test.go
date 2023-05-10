@@ -315,7 +315,7 @@ func TestGenerateReport(t *testing.T) {
 	}
 	elapsedTestTime := 3 * time.Second
 	writer := bufio.NewWriter(&bytes.Buffer{})
-	err := generateReport(tmplData, allTests, testFileDetailsByPackage, elapsedTestTime, writer)
+	err := generateReport(tmplData, allTests, elapsedTestTime, writer)
 	assertions.Nil(err)
 	assertions.Equal(2, tmplData.NumOfTestPassed)
 	assertions.Equal(1, tmplData.NumOfTestFailed)
@@ -375,7 +375,6 @@ func TestParseSizeFlagIfValueIsNotInteger(t *testing.T) {
 	err := parseSizeFlag(tmplData, flags)
 	assertions.Error(err)
 	assertions.Equal(err.Error(), `strconv.Atoi: parsing "": invalid syntax`)
-
 }
 
 func TestParseSizeFlagIfWidthValueIsNotInteger(t *testing.T) {

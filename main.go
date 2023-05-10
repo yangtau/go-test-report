@@ -143,22 +143,12 @@ func initRootCommand() (*cobra.Command, *templateData, *cmdFlags) {
 				}
 			}()
 			startTestTime := time.Now()
-			allPackageNames, allTests, err := readTestDataFromStdIn(stdinScanner, flags, cmd)
+			_, allTests, err := readTestDataFromStdIn(stdinScanner, flags, cmd)
 			if err != nil {
 				return errors.New(err.Error() + "\n")
 			}
 			elapsedTestTime := time.Since(startTestTime)
-			// used to the location of test functions in test go files by package and test function name.
-			var testFileDetailByPackage testFileDetailsByPackage
-			if flags.listFlag != "" {
-				testFileDetailByPackage, err = getAllDetails(flags.listFlag)
-			} else {
-				testFileDetailByPackage, err = getPackageDetails(allPackageNames)
-			}
-			if err != nil {
-				return err
-			}
-			err = generateReport(tmplData, allTests, testFileDetailByPackage, elapsedTestTime, reportFileWriter)
+			err = generateReport(tmplData, allTests, elapsedTestTime, reportFileWriter)
 			elapsedTime := time.Since(startTime)
 			elapsedTimeMsg := []byte(fmt.Sprintf("[go-test-report] finished in %s\n", elapsedTime))
 			if _, err := cmd.OutOrStdout().Write(elapsedTimeMsg); err != nil {
@@ -303,7 +293,6 @@ func getPackageDetails(allPackageNames map[string]*types.Nil) (testFileDetailsBy
 				return ctx.Err()
 			}
 			return nil
-
 		})
 	}
 	go func() {
@@ -382,14 +371,16 @@ type byName []testRef
 func (t byName) Len() int {
 	return len(t)
 }
+
 func (t byName) Swap(i, j int) {
 	t[i], t[j] = t[j], t[i]
 }
+
 func (t byName) Less(i, j int) bool {
 	return t[i].name < t[j].name
 }
 
-func generateReport(tmplData *templateData, allTests map[string]*testStatus, testFileDetailByPackage testFileDetailsByPackage, elapsedTestTime time.Duration, reportFileWriter *bufio.Writer) error {
+func generateReport(tmplData *templateData, allTests map[string]*testStatus, elapsedTestTime time.Duration, reportFileWriter *bufio.Writer) error {
 	// read the html template from the generated embedded asset go file
 	tpl := template.New("test_report.html.template")
 	testReportHTMLTemplateStr, err := hex.DecodeString(testReportHTMLTemplate)
@@ -425,11 +416,11 @@ func generateReport(tmplData *templateData, allTests map[string]*testStatus, tes
 			tmplData.TestResults = append(tmplData.TestResults, &testGroupData{})
 		}
 		// add file info(name and position; line and col) associated with the test function
-		testFileInfo := testFileDetailByPackage[status.Package][status.TestName]
-		if testFileInfo != nil {
-			status.TestFileName = testFileInfo.FileName
-			status.TestFunctionDetail = testFileInfo.TestFunctionFilePos
-		}
+		// testFileInfo := testFileDetailByPackage[status.Package][status.TestName]
+		// if testFileInfo != nil {
+		// 	status.TestFileName = testFileInfo.FileName
+		// 	status.TestFunctionDetail = testFileInfo.TestFunctionFilePos
+		// }
 		tmplData.TestResults[tgID].TestResults = append(tmplData.TestResults[tgID].TestResults, status)
 		if !status.Passed {
 			if !status.Skipped {
